@@ -1,0 +1,77 @@
+---
+title: Architecture
+description: Overview of the program flow and module structure for the Python Port Scanner.
+---
+
+The scanner is a single-file Python program built around one entry point — `main()` — that coordinates argument parsing, thread creation, rate limiting, and result persistence.
+
+## Module structure
+
+All logic lives in one file. The key responsibilities are divided across these functions and classes:
+
+<CardGroup cols={2}>
+  <Card title="main()" icon="play">
+    Entry point. Parses arguments, creates the semaphore and `RateLimiter`, spawns one thread per port, joins all threads, sorts results, and saves output.
+  </Card>
+  <Card title="limited_scan()" icon="shield">
+    Bridge function. Calls `rate_limiter.wait()`, then acquires the semaphore before delegating to `port_scan()`.
+  </Card>
+  <Card title="port_scan()" icon="wifi">
+    Core probe. Opens a TCP socket with a 3-second timeout, records the port status, and appends to the shared `results` list.
+  </Card>
+  <Card title="RateLimiter" icon="gauge">
+    Sliding-window rate limiter. Throttles probes to a configurable maximum per second across all threads.
+  </Card>
+</CardGroup>
+
+## Program flow
+
+The call chain from startup to output:
+
+```text
+main()
+├── parse_arguments()          # reads CLI flags
+├── threading.Semaphore(n)     # concurrency cap
+├── RateLimiter(r)             # probes-per-second cap
+│
+├── for each port:
+│   └── threading.Thread → limited_scan(port, host, semaphore, rate_limiter)
+│           ├── rate_limiter.wait()     # sliding-window check
+│           └── semaphore acquired
+│                   └── port_scan(host, port)
+│                           ├── socket.connect()    # TCP handshake
+│                           ├── determine status    # open / closed / filtered / error
+│                           ├── service_name_mapping(port)
+│                           │       └── socket.getservbyport()
+│                           └── results.append()    # guarded by results_lock
+│
+├── t.join() for all threads   # wait for completion
+├── results.sort(key=port)
+└── save_results()             # write JSON / CSV
+```
+
+## Global shared state
+
+Two module-level objects are shared across all threads:
+
+| Object | Type | Protected by | Purpose |
+|---|---|---|---|
+| `results` | `list` | `results_lock` | Accumulates `{port, status}` dicts from every probe |
+| stdout | — | `print_lock` | Prevents interleaved console output |
+
+<Warning>
+Both locks must be acquired before writing. Never write to `results` or call `print()` without holding the corresponding lock, or you risk data corruption and garbled output.
+</Warning>
+
+## Service name resolution
+
+`service_name_mapping()` wraps `socket.getservbyport()`, which queries the local system's service database (typically `/etc/services` on Linux). If the port has no registered service name, the function returns the string `"Service name NOT FOUND"` rather than propagating the exception.
+
+## Output lifecycle
+
+After all threads complete, `main()` sorts `results` by port number in ascending order before passing the list to `save_results()`. If no output path is supplied via `--output`, a timestamped filename is generated automatically:
+
+```python
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+output_file = f"scan_results_{timestamp}.json"
+```

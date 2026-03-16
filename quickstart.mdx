@@ -1,80 +1,116 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Run your first port scan in under a minute."
 ---
 
-## Get started in three steps
+## Run your first scan
 
-Get your documentation site running locally and make your first customization.
+<Steps>
+  <Step title="Open a terminal in the project folder">
+    <Tabs>
+      <Tab title="Linux / macOS">
+        ```bash
+        cd BeCode-Python_Project
+        ```
+      </Tab>
+      <Tab title="Windows">
+        ```bash
+        cd BeCode-Python_Project
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
 
-### Step 1: Set up your local environment
+  <Step title="Run the simplest possible scan">
+    Pass a target hostname or IP address. Without any extra flags, the scanner probes ports 1–1024 using 100 concurrent threads at a rate of 10 probes per second:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash
+    python Port_scanner.py scanme.nmap.org
+    ```
 
-### Step 2: Deploy your changes
+    <Note>
+      On Linux and macOS, you may need to use `python3` instead of `python` depending on your system configuration.
+    </Note>
+  </Step>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+  <Step title="Watch the terminal output">
+    As ports are probed, results print in real time:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```
+    Port 22   → ssh is open
+    Port 25   → smtp is closed
+    Port 80   → http is open
+    Port 135  → Service name NOT FOUND is closed
+    Port 443  → https is open
+    Port 631  → ipp is filtered (timeout)
+    ...
+    Results saved to scan_results_2024-01-15_10-30-00.json
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    Port Scanning is Complete.
+    ```
 
-### Step 3: Go live
+    Each line shows:
+    - The **port number**
+    - The **service name** resolved from your OS's service database (or `Service name NOT FOUND` for unregistered ports)
+    - The **status**: `open`, `closed`, or `filtered (timeout)`
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Find your output file">
+    When no output filename is specified, results are saved automatically to a timestamped JSON file in the current directory:
+
+    ```
+    scan_results_2024-01-15_10-30-00.json
+    ```
+
+    Open it to see the full structured results:
+
+    ```json
+    {
+        "target": "scanme.nmap.org",
+        "scan_results": [
+            {"port": 22, "status": "open"},
+            {"port": 25, "status": "closed"},
+            {"port": 80, "status": "open"},
+            {"port": 443, "status": "open"},
+            {"port": 631, "status": "filtered"}
+        ]
+    }
+    ```
+
+    Results are sorted by port number in ascending order.
+  </Step>
+
+  <Step title="Run a targeted scan with a named output file">
+    To scan only ports 80 and 443 and save results as a plain-text file:
+
+    ```bash
+    python Port_scanner.py scanme.nmap.org -s 80 -e 443 -o web_scan.txt
+    ```
+
+    The `-s` and `-e` flags set the start and end of the port range. The `-o` flag sets the output filename — the extension (`.txt`, `.json`, or `.csv`) determines the format.
+
+    The resulting `web_scan.txt` file looks like this:
+
+    ```
+    PORT SCAN RESULTS
+    =================
+    Target : scanme.nmap.org
+    Date   : 2024-01-15_10-30-00
+    =================
+
+    Port 80     | http                 | open
+    Port 443    | https                | open
+    ```
+  </Step>
+</Steps>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Advanced options" icon="sliders" href="/reference/cli-options">
+    Control thread count, rate limiting, port ranges, and more with the full set of CLI flags.
+  </Card>
+  <Card title="Output formats" icon="file-export" href="/usage/output-formats">
+    Export results as JSON, plain text, or CSV — and understand the structure of each format.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

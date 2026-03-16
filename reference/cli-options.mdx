@@ -1,0 +1,157 @@
+---
+title: CLI options
+description: Complete reference for all command-line arguments accepted by the Python Port Scanner.
+---
+
+## Synopsis
+
+```bash
+python scanner.py <target> [-s START_PORT] [-e END_PORT] [-t THREADS] [-r RATE_LIMIT] [-o OUTPUT]
+```
+
+## Help output
+
+```text
+usage: scanner.py [-h] [-s START_PORT] [-e END_PORT] [-t THREADS] [-r RATE_LIMIT] [-o OUTPUT] target
+
+Simple Multithreaded Port Scanner
+
+positional arguments:
+  target                Target IP address or hostname
+
+options:
+  -h, --help            show this help message and exit
+  -s START_PORT, --start-port START_PORT
+                        Start port (default: 1)
+  -e END_PORT, --end-port END_PORT
+                        End port (default: 1024)
+  -t THREADS, --threads THREADS
+                        Maximum number of concurrent threads
+  -r RATE_LIMIT, --rate-limit RATE_LIMIT
+                        Maximum number of port probes per second (default: 10)
+  -o OUTPUT, --output OUTPUT
+                        Output filename with extension: .json, .txt or .csv (e.g. results.txt)
+```
+
+## Positional arguments
+
+<ParamField path="target" type="string" required>
+  The IP address or hostname to scan. This argument is required.
+
+  Examples:
+  - `192.168.1.1` — IPv4 address
+  - `scanme.nmap.org` — fully qualified domain name
+  - `localhost` — loopback address
+</ParamField>
+
+## Optional flags
+
+<ParamField query="-s / --start-port" type="number" default="1" placeholder="1–65535">
+  The first port in the scan range. Must be an integer between 1 and 65535. Must be less than or
+  equal to `--end-port`.
+
+  ```bash
+  python scanner.py 192.168.1.1 -s 80
+  python scanner.py 192.168.1.1 --start-port 8000
+  ```
+</ParamField>
+
+<ParamField query="-e / --end-port" type="number" default="1024" placeholder="1–65535">
+  The last port in the scan range (inclusive). Must be an integer between 1 and 65535. Must be
+  greater than or equal to `--start-port`.
+
+  ```bash
+  python scanner.py 192.168.1.1 -e 9000
+  python scanner.py 192.168.1.1 --end-port 65535
+  ```
+</ParamField>
+
+<ParamField query="-t / --threads" type="number" default="100">
+  Maximum number of concurrent threads used to probe ports. Higher values increase scan speed but
+  consume more system resources and may trigger intrusion detection systems.
+
+  <Warning>
+  Very high thread counts (200+) can exhaust OS file descriptor limits and may overwhelm the target
+  host. See the [FAQ](/reference/faq) for details.
+  </Warning>
+
+  ```bash
+  python scanner.py 192.168.1.1 -t 50
+  python scanner.py 192.168.1.1 --threads 200
+  ```
+</ParamField>
+
+<ParamField query="-r / --rate-limit" type="number" default="10">
+  Maximum number of port probes dispatched per second across all threads. Use this to avoid
+  flooding the target or tripping rate-based firewall rules.
+
+  ```bash
+  python scanner.py 192.168.1.1 -r 50
+  python scanner.py 192.168.1.1 --rate-limit 5
+  ```
+</ParamField>
+
+<ParamField query="-o / --output" type="string">
+  Path to the output file. The file extension determines the output format.
+
+  | Extension          | Format                                      |
+  | ------------------ | ------------------------------------------- |
+  | `.json` or none    | JSON array of result objects                |
+  | `.txt`             | Plain-text table                            |
+  | `.csv`             | CSV with header: `target,port,service,status` |
+  | Unknown extension  | Defaults to JSON; `.json` is appended       |
+
+  If this flag is omitted, the scanner writes to an auto-generated file named
+  `scan_results_YYYY-MM-DD_HH-MM-SS.json` in the current directory.
+
+  ```bash
+  python scanner.py 192.168.1.1 -o results.json
+  python scanner.py 192.168.1.1 --output /tmp/scan.csv
+  python scanner.py 192.168.1.1 -o report.txt
+  ```
+</ParamField>
+
+## Port status values
+
+Each probed port is assigned one of the following statuses:
+
+| Status | Meaning |
+| --- | --- |
+| `open` | TCP connect succeeded |
+| `closed` | Connection refused by the target |
+| `filtered` | Socket timed out after 3 seconds — likely a firewall or no listener |
+| `error: <message>` | An unexpected exception occurred; the message describes the error |
+
+## Common port numbers
+
+| Port | Service |
+| ---- | ------- |
+| 22 | SSH |
+| 25 | SMTP |
+| 53 | DNS |
+| 80 | HTTP |
+| 443 | HTTPS |
+| 3306 | MySQL |
+| 5432 | PostgreSQL |
+| 8080 | HTTP (alternate) |
+
+## Usage examples
+
+```bash
+# Scan default range (ports 1–1024) on a local host
+python scanner.py 192.168.1.1
+
+# Scan a specific port range with a custom thread count
+python scanner.py scanme.nmap.org -s 1 -e 65535 -t 50 -r 20
+
+# Save results as CSV
+python scanner.py localhost -s 1 -e 9000 -o results.csv
+
+# Scan web-related ports and save as plain text
+python scanner.py example.com -s 80 -e 8443 -o web_ports.txt
+```
+
+<Tip>
+  Start with a narrow port range and low thread/rate-limit values when scanning an unfamiliar host
+  to avoid overwhelming it or triggering security alerts.
+</Tip>

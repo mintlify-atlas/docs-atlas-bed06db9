@@ -1,0 +1,69 @@
+---
+title: Rate limiting
+description: How the RateLimiter class controls probe throughput using a sliding-window algorithm.
+---
+
+Without rate limiting, a scanner that spawns hundreds of threads can fire thousands of TCP probes per second. This saturates the target host, trips intrusion detection systems, and produces unreliable results. The `RateLimiter` class caps throughput at a configurable maximum.
+
+## The `RateLimiter` class
+
+```python {1-13} title="rate_limiter.py"
+class RateLimiter:
+    def __init__(self, max_per_second):   # (1) configured from --rate-limit
+        self.max_per_second = max_per_second
+        self.lock = threading.Lock()       # (2) one thread modifies the deque at a time
+        self.timestamps = collections.deque()  # (3) sliding window of probe timestamps
+
+    def wait(self):
+        with self.lock:                    # (4) acquire before reading or writing
+            now = time.time()
+            self.timestamps.append(now)    # (5) record this probe's timestamp
+            if len(self.timestamps) >= self.max_per_second:  # (6) window is full
+                oldest = self.timestamps.popleft()           # (7) evict the oldest entry
+                wait_time = 1.0 - (now - oldest)             # (8) time left in the window
+                if wait_time > 0:
+                    time.sleep(wait_time)                    # (9) sleep until window clears
+```
+
+<Note>
+**Sliding window explained.** The deque holds the timestamps of the last `max_per_second` probes. When the window is full, the oldest timestamp is removed and compared against the current time. If less than 1 second has elapsed since that oldest probe, the thread sleeps for the remaining duration. This ensures that no more than `max_per_second` probes begin within any 1-second window — without requiring a fixed tick interval.
+</Note>
+
+## Algorithm walkthrough
+
+Assume `max_per_second = 3` and three threads call `wait()` in rapid succession:
+
+1. Thread A calls `wait()`. Deque: `[t0]`. Length < 3, no sleep.
+2. Thread B calls `wait()`. Deque: `[t0, t1]`. Length < 3, no sleep.
+3. Thread C calls `wait()`. Deque: `[t0, t1, t2]`. Length == 3 — oldest is `t0`.
+   - If `now - t0 < 1.0`, thread C sleeps for `1.0 - (now - t0)` seconds.
+   - `t0` is removed; deque becomes `[t1, t2]` after C proceeds.
+4. Thread D calls `wait()`. Deque: `[t1, t2, t3]`. Checks `t1`. Sleeps if needed.
+
+The result is a smooth cap: at most 3 probes are initiated per second across all threads.
+
+## Thread safety
+
+The `threading.Lock()` at line 2 ensures that only one thread executes the `wait()` body at a time. Without it, two threads could simultaneously read the deque length, both conclude the window is not full, and both proceed — violating the rate limit.
+
+<Warning>
+The lock is held for the entire duration of `wait()`, including any `time.sleep()` call. This means other threads queue up behind the sleeping thread. This is intentional: it serializes probe initiation and enforces the rate limit precisely.
+</Warning>
+
+## Additional spacing in `port_scan()`
+
+Beyond the rate limiter, `port_scan()` ends with:
+
+```python
+time.sleep(0.05)
+```
+
+This 50 ms per-thread pause adds spacing between consecutive probes on the same thread, reducing the risk of the target interpreting rapid sequential connections as an attack pattern.
+
+## Practical effect
+
+With the default flag `--rate-limit 10`:
+
+- At most 10 TCP connection attempts are initiated per second, globally.
+- Individual threads may still be blocked waiting for the semaphore or sleeping in `port_scan()`.
+- The effective throughput is the minimum of the rate limit and the concurrency cap imposed by the semaphore.

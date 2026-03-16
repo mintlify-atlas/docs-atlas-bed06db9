@@ -1,0 +1,75 @@
+---
+title: "Introduction"
+description: "A lightweight, multithreaded Python CLI tool for scanning open TCP ports on any target host."
+---
+
+# Python Port Scanner
+
+Python Port Scanner is a simple, fast, and dependency-free tool that scans a target host for open TCP ports. Built with Python's standard library, it leverages multithreading and rate limiting to make scans both quick and responsible.
+
+<Warning>
+  This tool is intended **for educational and authorized security testing only**. Never scan systems without explicit permission from the owner.
+</Warning>
+
+## What it does
+
+The scanner resolves your target to an IP address, then probes each port in the specified range using TCP socket connections. For each port it reports:
+
+- **Open** — a connection was established successfully
+- **Closed** — the connection was actively refused
+- **Filtered** — the connection timed out (likely blocked by a firewall)
+
+Results are saved automatically to a file in your choice of JSON, TXT, or CSV format.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Multithreaded scanning" icon="bolt">
+    Probes up to 100 ports simultaneously by default, dramatically reducing scan time compared to sequential scanning.
+  </Card>
+  <Card title="Rate limiting" icon="gauge">
+    Configurable probe rate (default: 10/second) prevents overwhelming target hosts and avoids triggering intrusion detection systems.
+  </Card>
+  <Card title="Multiple output formats" icon="file-export">
+    Export results as JSON, plain text, or CSV — with automatic timestamped filenames to prevent overwrites.
+  </Card>
+  <Card title="Service name resolution" icon="magnifying-glass">
+    Automatically resolves well-known port numbers to service names (e.g., port 80 → `http`, port 443 → `https`).
+  </Card>
+  <Card title="No external dependencies" icon="circle-check">
+    Uses only Python standard library modules: `socket`, `threading`, `argparse`, `json`, `csv`, and `os`.
+  </Card>
+  <Card title="Cross-platform" icon="laptop">
+    Works on Windows, Linux, and macOS with Python 3.8 or later.
+  </Card>
+</CardGroup>
+
+## Requirements
+
+- Python **3.8** or later
+- No pip packages required — all standard library
+
+## Quick example
+
+```bash
+python Port_scanner.py 192.168.1.1 -s 1 -e 1024 -o results.json
+```
+
+This scans ports 1–1024 on `192.168.1.1` and saves results to `results.json`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Clone the repository and verify your Python version.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run your first scan in under a minute.
+  </Card>
+  <Card title="CLI options" icon="terminal" href="/reference/cli-options">
+    Full reference for all flags and arguments.
+  </Card>
+  <Card title="Output formats" icon="file" href="/usage/output-formats">
+    Learn how to export results to JSON, TXT, or CSV.
+  </Card>
+</CardGroup>

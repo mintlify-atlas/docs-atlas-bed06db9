@@ -1,0 +1,129 @@
+---
+title: Output formats
+description: Save scan results to JSON, TXT, or CSV using the -o flag, or let the scanner generate a timestamped filename automatically.
+---
+
+The `-o` flag sets the output filename. The file extension determines the format. When `-o` is omitted, the scanner saves a JSON file with an auto-generated timestamped name.
+
+```bash
+python Port_scanner.py 192.168.1.1 -o results.json
+python Port_scanner.py 192.168.1.1 -o results.txt
+python Port_scanner.py 192.168.1.1 -o results.csv
+```
+
+## Format examples
+
+<Tabs>
+  <Tab title="JSON">
+    JSON is the default format. It stores the target host and a list of port entries, each with a port number and status.
+
+    ```json
+    {
+        "target": "192.168.1.1",
+        "scan_results": [
+            {"port": 22, "status": "open"},
+            {"port": 80, "status": "open"},
+            {"port": 443, "status": "closed"}
+        ]
+    }
+    ```
+
+    JSON is well-suited for programmatic processing or ingestion into other tools.
+  </Tab>
+  <Tab title="TXT">
+    The plain-text format writes a human-readable report with a header block followed by one line per port. Each line includes the port number, resolved service name, and status.
+
+    ```text
+    PORT SCAN RESULTS
+    =================
+    Target : 192.168.1.1
+    Date   : 2024-01-15_10-30-00
+    =================
+
+    Port 22     | ssh                  | open
+    Port 80     | http                 | open
+    Port 443    | https                | closed
+    ```
+
+    Use TXT when you need a report that is easy to read in a terminal or share as a plain file.
+  </Tab>
+  <Tab title="CSV">
+    The CSV format includes a header row followed by one data row per port. Each row contains the target, port, resolved service name, and status.
+
+    ```text
+    target,port,service,status
+    192.168.1.1,22,ssh,open
+    192.168.1.1,80,http,open
+    192.168.1.1,443,https,closed
+    ```
+
+    CSV is ideal for importing results into spreadsheet applications or data analysis pipelines.
+  </Tab>
+</Tabs>
+
+## CLI examples by format
+
+<CodeGroup>
+
+```bash JSON output
+python Port_scanner.py 192.168.1.1 -o results.json
+```
+
+```bash TXT output
+python Port_scanner.py 192.168.1.1 -o results.txt
+```
+
+```bash CSV output
+python Port_scanner.py 192.168.1.1 -o results.csv
+```
+
+</CodeGroup>
+
+## Auto-named output
+
+When you omit the `-o` flag entirely, the scanner automatically saves a JSON file in the current directory using a timestamp-based name:
+
+```text
+scan_results_YYYY-MM-DD_HH-MM-SS.json
+```
+
+For example:
+
+```text
+scan_results_2024-01-15_10-30-00.json
+```
+
+This prevents results from being overwritten if you run multiple scans in the same directory.
+
+## Edge cases
+
+<AccordionGroup>
+  <Accordion title="No extension provided">
+    If you pass a filename with no extension, the scanner appends `.json` and prints a warning:
+
+    ```bash
+    python Port_scanner.py 192.168.1.1 -o results
+    ```
+
+    ```text
+    No extension provided — defaulting to .json
+    Results saved to results.json
+    ```
+  </Accordion>
+  <Accordion title="Unknown extension provided">
+    If the extension is not `.json`, `.txt`, or `.csv`, the scanner falls back to JSON and appends `.json` to the provided name:
+
+    ```bash
+    python Port_scanner.py 192.168.1.1 -o results.xml
+    ```
+
+    ```text
+    Unknown extension '.xml' — defaulting to .json
+    Results saved to results.xml.json
+    ```
+
+    <Note>
+    Rename the output file after the scan if the auto-appended extension is inconvenient.
+    </Note>
+  </Accordion>
+</AccordionGroup>

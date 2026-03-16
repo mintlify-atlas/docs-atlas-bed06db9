@@ -1,0 +1,82 @@
+---
+title: Basic scan
+description: Run your first port scan against an IP address or hostname using the default settings.
+---
+
+The simplest way to use the port scanner is to pass a target — either an IP address or a hostname. By default, the scanner probes ports 1–1024 using 100 threads at a rate of 10 probes per second and saves results to a timestamped JSON file.
+
+## Scanning a target
+
+<Steps>
+  <Step title="Scan by IP address">
+    Pass an IPv4 address directly as the first argument:
+
+    ```bash
+    python Port_scanner.py 192.168.1.1
+    ```
+  </Step>
+  <Step title="Scan by hostname">
+    You can also pass a fully qualified hostname. The scanner resolves it before connecting:
+
+    ```bash
+    python Port_scanner.py example.com
+    ```
+  </Step>
+  <Step title="Specify a port range">
+    Use `-s` and `-e` to define the start and end ports of the scan:
+
+    ```bash
+    python Port_scanner.py 192.168.1.1 -s 1 -e 100
+    ```
+
+    This scans only ports 1 through 100.
+  </Step>
+</Steps>
+
+## Default behavior
+
+When you run the scanner without any optional flags, the following defaults apply:
+
+| Setting | Default value |
+|---|---|
+| Start port | 1 |
+| End port | 1024 |
+| Threads | 100 |
+| Rate limit | 10 probes/sec |
+| Output | Auto-named JSON file (`scan_results_YYYY-MM-DD_HH-MM-SS.json`) |
+
+<Note>
+The output file is written to the current working directory. If you need to control the filename or format, use the `-o` flag. See [Output formats](/usage/output-formats) for details.
+</Note>
+
+## Terminal output
+
+As the scan runs, each open port is printed to the terminal in real time. Closed and filtered ports are recorded silently:
+
+```text
+Port 22 → ssh is open
+Port 80 → http is open
+Port 443 → https is open
+```
+
+Once the scan finishes, a summary line confirms where results were saved:
+
+```text
+Results saved to scan_results_2024-01-15_10-30-00.json
+```
+
+## Port states
+
+Each probed port is assigned one of three states:
+
+<CardGroup cols={3}>
+  <Card title="Open" icon="circle-check">
+    The target accepted the TCP connection. A service is actively listening on this port.
+  </Card>
+  <Card title="Closed" icon="circle-xmark">
+    The target responded with a connection refusal. The port is reachable but no service is listening.
+  </Card>
+  <Card title="Filtered" icon="circle-minus">
+    The connection attempt timed out. A firewall or packet filter is likely blocking the port.
+  </Card>
+</CardGroup>

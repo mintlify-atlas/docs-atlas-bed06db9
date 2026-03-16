@@ -1,0 +1,89 @@
+---
+title: Threading model
+description: How the scanner uses Python threads, semaphores, and locks to probe ports concurrently and safely.
+---
+
+The scanner achieves concurrency by creating one `threading.Thread` per port. A `threading.Semaphore` caps how many threads actively probe the target at any moment, and two locks prevent race conditions on shared resources.
+
+## Thread creation
+
+`main()` iterates over the full port range and starts a thread for every port before waiting for any of them to finish:
+
+```python title="main() thread loop"
+threads = []
+for port in range(port_start, port_end + 1):
+    t = threading.Thread(
+        target=limited_scan,
+        args=(port, target_host, semaphore, rate_limiter))
+    threads.append(t)
+    t.start()              # thread begins immediately
+
+for t in threads:
+    t.join()               # wait for all threads to complete
+```
+
+All threads are started in the first loop. The second loop blocks until every thread has exited, ensuring no results are saved while probes are still running.
+
+<Warning>
+Every port in the scan range gets its own thread at startup. Scanning ports 1–65535 creates 65,535 threads. On most systems this approaches or exceeds the default thread limit and consumes significant memory. For large ranges, prefer a narrower target range or reduce concurrency with `--threads`.
+</Warning>
+
+## Concurrency cap with `Semaphore`
+
+Creating a thread and running `port_scan()` are separate events. Threads are created immediately but must acquire a semaphore slot before they can call `port_scan()`:
+
+```python title="limited_scan()"
+def limited_scan(port, target_host, semaphore, rate_limiter):
+    rate_limiter.wait()         # throttle to max probes/sec
+    with semaphore:             # acquire a slot (blocks if all slots taken)
+        port_scan(target_host, port)
+```
+
+The semaphore is initialized with `thread_limit` (default 100):
+
+```python
+semaphore = threading.Semaphore(thread_limit)
+```
+
+This means at most 100 threads execute `port_scan()` simultaneously. The rest wait at `with semaphore:` until a running thread exits the block and releases its slot.
+
+<Tip>
+For stable networks with low latency, you can raise `--threads` to 200–500 to increase throughput. For slow or lossy networks, reduce it to 20–50 to avoid false `filtered` results caused by socket timeouts under load. Always pair a higher thread count with a proportionally higher `--rate-limit` to avoid queuing delays at the semaphore.
+</Tip>
+
+## Race condition prevention
+
+Two module-level locks protect shared resources:
+
+<AccordionGroup>
+  <Accordion title="results_lock — protecting the results list">
+    `results` is a plain Python list. CPython's GIL does not make `list.append()` atomic across all Python versions and implementations. `results_lock` ensures only one thread appends at a time:
+
+    ```python
+    with results_lock:
+        results.append({"port": port, "status": status})
+    ```
+
+    Without this lock, two threads could corrupt the list's internal state when appending simultaneously.
+  </Accordion>
+  <Accordion title="print_lock — preventing interleaved console output">
+    `print()` writes to stdout in multiple steps. Without synchronization, output from two threads can interleave mid-line:
+
+    ```python
+    with print_lock:
+        print(f"Port {port} → {service_name} is open")
+    ```
+
+    The lock serializes all console output so each status line appears complete and in its own line.
+  </Accordion>
+</AccordionGroup>
+
+## Thread lifecycle summary
+
+```text
+Thread created → rate_limiter.wait() → acquire semaphore
+    → port_scan() → socket connect → record status
+    → release semaphore → thread exits
+```
+
+Once all threads exit their `join()`, `main()` sorts `results` by port number and calls `save_results()`.

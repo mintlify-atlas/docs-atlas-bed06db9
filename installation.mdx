@@ -1,0 +1,77 @@
+---
+title: "Installation"
+description: "Clone the Python Port Scanner repository and verify your environment is ready."
+---
+
+## Prerequisites
+
+Python Port Scanner uses only the Python standard library — no `pip install` required.
+
+- **Python 3.8 or later** — the only dependency
+- **Git** — to clone the repository
+- A terminal (Command Prompt, PowerShell, bash, zsh, etc.)
+
+## Install
+
+<Steps>
+  <Step title="Clone the repository">
+    Run the following command to clone the project to your local machine:
+
+    ```bash
+    git clone https://github.com/JMGLT/BeCode-Python_Project.git
+    ```
+  </Step>
+
+  <Step title="Navigate to the project folder">
+    <Tabs>
+      <Tab title="Linux / macOS">
+        ```bash
+        cd BeCode-Python_Project
+        ```
+      </Tab>
+      <Tab title="Windows">
+        ```bash
+        cd BeCode-Python_Project
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Verify your Python version">
+    Confirm you have Python 3.8 or later installed:
+
+    <Tabs>
+      <Tab title="Linux / macOS">
+        ```bash
+        python3 --version
+        ```
+      </Tab>
+      <Tab title="Windows">
+        ```bash
+        python --version
+        ```
+      </Tab>
+    </Tabs>
+
+    The output should be `Python 3.8.x` or higher. If Python is not installed, download it from [python.org](https://www.python.org/downloads/).
+  </Step>
+
+  <Step title="Locate the scanner script">
+    The entire tool lives in a single file:
+
+    ```
+    BeCode-Python_Project/
+    └── Port_scanner.py
+    ```
+
+    No build step, no virtual environment, no dependencies to install.
+  </Step>
+</Steps>
+
+<Check>
+  **Setup complete.** If `python --version` (or `python3 --version`) returned 3.8 or higher and you can see `Port_scanner.py` in the directory, you're ready to run your first scan.
+</Check>
+
+<Warning>
+  Only scan hosts you own or have explicit written permission to test. Unauthorized port scanning may be illegal in your jurisdiction.
+</Warning>
